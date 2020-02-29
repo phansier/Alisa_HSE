@@ -198,26 +198,31 @@ def stage2(user_id, req, res):
         res['response']['text'] = response
         res['response']['buttons'] = stage2_buttons
         return
-    if req['request']['original_utterance'].lower() in [
-        'сегодня',
-        'а сегодня',
-    ]:
-        response = get_lessons(sessionStorage[user_id]['email'], "2020.02.29", "2020.02.29")
-        res['response']['text'] = response
-        res['response']['buttons'] = stage2_buttons[-2:]
-        return
-    if req['request']['original_utterance'].lower() in [
-        'завтра',
-        'а завтра',
-    ]:
-        res['response']['text'] = 'Поздравляю. Пар на завтра нет.'  # todo go to API
-        res['response']['buttons'] = [stage2_buttons[0], stage2_buttons[2]]
-        return
+    # if req['request']['original_utterance'].lower() in [
+    #     'сегодня',
+    #     'а сегодня',
+    # ]:
+    #     response = get_lessons(sessionStorage[user_id]['email'], "2020.02.29", "2020.02.29")
+    #     res['response']['text'] = response
+    #     res['response']['buttons'] = stage2_buttons[-2:]
+    #     return
+    # if req['request']['original_utterance'].lower() in [
+    #     'завтра',
+    #     'а завтра',
+    # ]:
+    #     res['response']['text'] = 'Поздравляю. Пар на завтра нет.'  # todo go to API
+    #     res['response']['buttons'] = [stage2_buttons[0], stage2_buttons[2]]
+    #     return
     if req['request']['original_utterance'].lower() in [
         'на неделю',
         'а на неделю',
     ]:
-        res['response']['text'] = 'Поздравляю. Пар на неделю нет.'  # todo go to API
+        d = datetime.datetime.now()
+        start = datetime_format(d)
+        d += datetime.timedelta(days=7)
+        end = datetime_format(d)
+        response = get_lessons(sessionStorage[user_id]['email'], start, end)
+        res['response']['text'] = response
         res['response']['buttons'] = stage2_buttons[:2]
         return
 
@@ -241,6 +246,8 @@ def try_parse_date(entities):
                     day += v["day"]
                 else:
                     day = v["day"]
+            if day < 10:
+                day = f"0{day}"
             month = d.month
             if "month" in v:
                 if "month_is_relative" in v and v["month_is_relative"]:
@@ -271,6 +278,15 @@ def try_parse_date(entities):
                 date = f"{year}.{month}.{day}"
     return date
 
+def datetime_format(d):
+    day = d.day
+    if day < 10:
+        day = f"0{day}"
+    month = d.month
+    if month < 10:
+        month = f"0{month}"
+    year = d.year
+    return f"{year}.{month}.{day}"
 
 def stage3(user_id, req, res):
     pass
