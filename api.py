@@ -121,7 +121,7 @@ def handle_exit(user_id, req, res):
         'нет',
         'не',
         'не сегодня',
-    ] or 'no' in req['request']['nlu']['intents']:
+    ] or 'nlu' in req['request'] and 'intents' in req['request']['nlu'] and 'no' in req['request']['nlu']['intents']:
         res['response']['text'] = 'Жаль. Приходи еще.'
         res['response']['end_session'] = True
         return True
@@ -167,7 +167,7 @@ def stage0(user_id, req, res):
         'ок',
         'хорошо',
         'ага',
-    ] or 'yes' in req['request']['nlu']['intents']:
+    ] or 'nlu' in req['request'] and 'intents' in req['request']['nlu'] and 'yes' in req['request']['nlu']['intents']:
         # Пользователь согласился, идем на стадию 1.
         sessionStorage[user_id]['stage'] = 1
 
