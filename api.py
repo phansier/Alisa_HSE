@@ -199,7 +199,8 @@ def stage2(user_id, req, res):
     date = try_parse_date(req['request']['nlu']['entities'])
     if date is not None:
         response = get_lessons(sessionStorage[user_id]['email'], date, date)
-        res['response']['text'] = response
+        user_date = req['request']['original_utterance'].title()
+        res['response']['text'] = user_date + " " + response
         res['response']['buttons'] = stage2_buttons
         return
     # if req['request']['original_utterance'].lower() in [

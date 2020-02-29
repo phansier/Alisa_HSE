@@ -1,6 +1,16 @@
 import requests
 import json
-import datetime
+
+
+def pairs(count):
+    if count == 0:
+        return "нет пар"
+    elif count == 1:
+        return "будет одна пара:"
+    elif 2 <= count <= 4:
+        return f"будет {count} пары:"
+    elif 5 <= count <= 20:
+        return f"будет {count} пар:"
 
 
 def get_lessons(email, start_date, end_date):
@@ -10,7 +20,7 @@ def get_lessons(email, start_date, end_date):
     resp = json.loads(response.content.decode("utf-8"))
     try:
         count = len(resp)
-        res = f"{count} пар: \n"
+        res = pairs(count) + "\n"
         for i in resp:
             res += f"{i['discipline']}\n"
         return res
