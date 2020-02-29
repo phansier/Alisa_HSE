@@ -9,6 +9,8 @@ import logging
 # Импортируем подмодули Flask для запуска веб-сервиса.
 from flask import Flask, request
 
+from ruz import get_lessons
+
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
@@ -110,6 +112,11 @@ def stage0(user_id, req, res):
             'stage': 1
         }
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+        res['response']['buttons'] = [
+                {
+                    "title": "tvtibilov@edu.hse.ru",
+                    "hide": True
+                }]
         return
 
     # Если нет, то убеждаем его купить слона!
@@ -171,7 +178,9 @@ def stage2(user_id, req, res):
         'сегодня',
         'а сегодня',
     ]:
-        res['response']['text'] = 'Поздравляю. Пар на сегодня нет.'  # todo go to API
+        response = get_lessons(sessionStorage[user_id]['email'],"2020.02.29","2020.02.29")
+        res['response']['text'] = response
+        #res['response']['text'] = 'Поздравляю. Пар на сегодня нет.'  # todo go to API
         res['response']['buttons'] = stage2_buttons[-2:]
         return
     if req['request']['original_utterance'].lower() in [
