@@ -12,6 +12,8 @@ from flask import Flask, request
 
 from ruz import get_lessons, add_months, add_years
 
+debug = True
+
 app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
@@ -69,7 +71,8 @@ def handle_dialog(req, res):
         sessionStorage[user_id] = {
             'stage': 0
         }
-        hello = 'Привет!!! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
+        debg = "!!!" if debug else "!"
+        hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
         res['response']['text'] = hello
         res['response']['buttons'] = stage0_buttons
         return
@@ -129,11 +132,12 @@ def stage0(user_id, req, res):
             'stage': 1
         }
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
-        res['response']['buttons'] = [
-            {
-                "title": "tvtibilov@edu.hse.ru",
-                "hide": True
-            }]
+        if debug:
+            res['response']['buttons'] = [
+                {
+                    "title": "tvtibilov@edu.hse.ru",
+                    "hide": True
+                }]
         return
 
     # Если нет, то убеждаем его купить слона!
