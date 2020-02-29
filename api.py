@@ -62,24 +62,42 @@ stage0_buttons = \
 
 # Функция для непосредственной обработки диалога.
 def handle_dialog(req, res):
-    user_id = req['session']['user_id']
-
-    if req['session']['new']:
-        # Это новый пользователь.
-        # Инициализируем сессию и поприветствуем его.
-
-        sessionStorage[user_id] = {
-            'stage': 0
-        }
-        debg = "!!!" if debug else "!"
-        hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
-        res['response']['text'] = hello
-        res['response']['buttons'] = stage0_buttons
-        return
+    user_id = req['session']['user']['user_id']
 
     if handle_exit(user_id, req, res):
         return
     if handle_help(user_id, req, res):
+        return
+
+    if req['session']['new']:
+        # Это новый пользователь.
+        # Инициализируем сессию и поприветствуем его.
+        debg = "!!!" if debug else "!"
+
+        email = None
+
+        if user_id in sessionStorage and 'email' in sessionStorage[user_id]:
+            email = sessionStorage[user_id]['email']
+        if 'state' in req and 'user' in req['state'] and 'email' in req['state']['user']:
+            email = req['state']['user']['email']
+        if email is not None:
+            sessionStorage[user_id]= {'email': email}
+            res['user_state_update'] = {'email': email}
+            hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n ' \
+                    f'Ваш email: {email}. На какие даты показать расписание?'
+            res['response']['text'] = hello
+            res['response']['buttons'] = stage1_buttons
+            sessionStorage[user_id]['stage'] = 2
+            return
+
+        sessionStorage[user_id] = {
+            'stage': 0
+        }
+
+        hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала ' \
+                f'нам нужно познакомиться. '
+        res['response']['text'] = hello
+        res['response']['buttons'] = stage0_buttons
         return
 
     if sessionStorage[user_id]['stage'] == 0:
@@ -128,9 +146,7 @@ def stage0(user_id, req, res):
         'ага',
     ] or 'yes' in req['request']['nlu']['intents']:
         # Пользователь согласился, идем на стадию 1.
-        sessionStorage[user_id] = {
-            'stage': 1
-        }
+        sessionStorage[user_id]['stage'] = 1
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
         if debug:
             res['response']['buttons'] = [
@@ -167,10 +183,11 @@ def stage1(user_id, req, res):
     email = req['request']['original_utterance'].lower()
 
     if str(email).endswith("@edu.hse.ru"):  # todo check email is valid
-        sessionStorage[user_id] = {
-            'stage': 2,
-            'email': str(email)
-        }
+        sessionStorage[user_id]['stage'] = 2
+        sessionStorage[user_id]['email'] = str(email)
+
+        res['user_state_update'] = {'email': str(email)}
+
         res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
         res['response']['buttons'] = stage1_buttons
         return
