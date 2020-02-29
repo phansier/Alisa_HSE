@@ -62,7 +62,10 @@ stage0_buttons = \
 
 # Функция для непосредственной обработки диалога.
 def handle_dialog(req, res):
-    user_id = req['session']['user']['user_id']
+    if 'user' in req['session']:
+        user_id = req['session']['user']['user_id']
+    else:
+        user_id = req['session']['user_id']
 
     if handle_exit(user_id, req, res):
         return
