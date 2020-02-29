@@ -74,7 +74,7 @@ def handle_dialog(req, res):
     if handle_help(user_id, req, res):
         return
 
-    if req['session']['new']:
+    if req['session']['new'] or user_id not in sessionStorage:
         # Это новый пользователь.
         # Инициализируем сессию и поприветствуем его.
         debg = "!!!" if debug else "!"
