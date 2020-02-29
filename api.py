@@ -5,11 +5,12 @@ from __future__ import unicode_literals
 # Импортируем модули для работы с JSON и логами.
 import json
 import logging
+import datetime
 
 # Импортируем подмодули Flask для запуска веб-сервиса.
 from flask import Flask, request
 
-from ruz import get_lessons
+from ruz import get_lessons, add_months, add_years
 
 app = Flask(__name__)
 
@@ -45,16 +46,17 @@ def main():
 
 
 stage0_buttons = \
-            [
-                {
-                    "title": "Давай",
-                    "hide": True
-                },
-                {
-                    "title": "Не сегодня",
-                    "hide": True
-                }
-            ]
+    [
+        {
+            "title": "Давай",
+            "hide": True
+        },
+        {
+            "title": "Не сегодня",
+            "hide": True
+        }
+    ]
+
 
 # Функция для непосредственной обработки диалога.
 def handle_dialog(req, res):
@@ -67,12 +69,14 @@ def handle_dialog(req, res):
         sessionStorage[user_id] = {
             'stage': 0
         }
-        hello = 'Привет! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
+        hello = 'Привет!!! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
         res['response']['text'] = hello
         res['response']['buttons'] = stage0_buttons
         return
 
     if handle_exit(user_id, req, res):
+        return
+    if handle_help(user_id, req, res):
         return
 
     if sessionStorage[user_id]['stage'] == 0:
@@ -98,6 +102,19 @@ def handle_exit(user_id, req, res):
     return False
 
 
+def handle_help(user_id, req, res):
+    if req['request']['original_utterance'].lower() in [
+        'помощь',
+        'что ты умеешь?',
+        'что ты умеешь',
+    ]:
+        res['response'][
+            'text'] = 'Привет! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
+        res['response']['end_session'] = True
+        return True
+    return False
+
+
 def stage0(user_id, req, res):
     # Обрабатываем ответ пользователя.
     if req['request']['original_utterance'].lower() in [
@@ -113,10 +130,10 @@ def stage0(user_id, req, res):
         }
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
         res['response']['buttons'] = [
-                {
-                    "title": "tvtibilov@edu.hse.ru",
-                    "hide": True
-                }]
+            {
+                "title": "tvtibilov@edu.hse.ru",
+                "hide": True
+            }]
         return
 
     # Если нет, то убеждаем его купить слона!
@@ -126,20 +143,20 @@ def stage0(user_id, req, res):
 
 
 stage1_buttons = \
-            [
-                {
-                    "title": "Сегодня",
-                    "hide": True
-                },
-                {
-                    "title": "Завтра",
-                    "hide": True
-                },
-                {
-                    "title": "На неделю",
-                    "hide": True
-                }
-            ]
+    [
+        {
+            "title": "Сегодня",
+            "hide": True
+        },
+        {
+            "title": "Завтра",
+            "hide": True
+        },
+        {
+            "title": "На неделю",
+            "hide": True
+        }
+    ]
 
 
 def stage1(user_id, req, res):
@@ -153,34 +170,40 @@ def stage1(user_id, req, res):
         res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
         res['response']['buttons'] = stage1_buttons
         return
-    res['response']['text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+    res['response'][
+        'text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
 
 
 stage2_buttons = \
-            [
-                {
-                    "title": "А сегодня",
-                    "hide": True
-                },
-                {
-                    "title": "А завтра",
-                    "hide": True
-                },
-                {
-                    "title": "А на неделю",
-                    "hide": True
-                }
-            ]
+    [
+        {
+            "title": "А сегодня",
+            "hide": True
+        },
+        {
+            "title": "А завтра",
+            "hide": True
+        },
+        {
+            "title": "А на неделю",
+            "hide": True
+        }
+    ]
 
 
 def stage2(user_id, req, res):
+    date = try_parse_date(req['request']['nlu']['entities'])
+    if date is not None:
+        response = get_lessons(sessionStorage[user_id]['email'], date, date)
+        res['response']['text'] = response
+        res['response']['buttons'] = stage2_buttons
+        return
     if req['request']['original_utterance'].lower() in [
         'сегодня',
         'а сегодня',
     ]:
-        response = get_lessons(sessionStorage[user_id]['email'],"2020.02.29","2020.02.29")
+        response = get_lessons(sessionStorage[user_id]['email'], "2020.02.29", "2020.02.29")
         res['response']['text'] = response
-        #res['response']['text'] = 'Поздравляю. Пар на сегодня нет.'  # todo go to API
         res['response']['buttons'] = stage2_buttons[-2:]
         return
     if req['request']['original_utterance'].lower() in [
@@ -201,6 +224,52 @@ def stage2(user_id, req, res):
     res['response']['text'] = 'Я вас не поняла. На какие даты показать расписание?'
     res['response']['buttons'] = stage1_buttons
     return
+
+
+def try_parse_date(entities):
+    date = None
+    for i in entities:
+        if i["type"] == "YANDEX.DATETIME":
+            v = i["value"]
+            d = datetime.datetime.now()
+            is_relative = False
+            day = d.day
+            if "day" in v:
+                if "day_is_relative" in v and v["day_is_relative"]:
+                    is_relative = True
+                    d += datetime.timedelta(days=v["day"])
+                    day += v["day"]
+                else:
+                    day = v["day"]
+            month = d.month
+            if "month" in v:
+                if "month_is_relative" in v and v["month_is_relative"]:
+                    is_relative = True
+                    d = add_months(d, v["month"])
+                    month += v["month"]
+                else:
+                    month = v["month"]
+            if month < 10:
+                month = f"0{month}"
+            year = d.year
+            if "year" in v:
+                if "year_is_relative" in v and v["year_is_relative"]:
+                    is_relative = True
+                    d = add_years(d, v["year"])
+                    year += v["year"]
+                else:
+                    year = v["year"]
+            if is_relative:
+                month = d.month
+                if d.month < 10:
+                    month = f"0{month}"
+                day = d.day
+                if d.day < 10:
+                    day = f"0{day}"
+                date = f"{d.year}.{month}.{day}"
+            else:
+                date = f"{year}.{month}.{day}"
+    return date
 
 
 def stage3(user_id, req, res):
