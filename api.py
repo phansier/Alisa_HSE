@@ -50,7 +50,8 @@ stage0_buttons = \
                 {
                     "title": "Не сегодня",
                     "hide": True
-                }]
+                }
+            ]
 
 # Функция для непосредственной обработки диалога.
 def handle_dialog(req, res):
@@ -124,19 +125,35 @@ def stage0(user_id, req, res):
     res['response']['buttons'] = stage0_buttons
     return
 
+stage1_buttons = \
+            [
+                {
+                    "title": "Сегодня",
+                    "hide": True
+                },
+                {
+                    "title": "Завтра",
+                    "hide": True
+                },
+                {
+                    "title": "На неделю",
+                    "hide": True
+                }
+            ]
+
 
 def stage1(user_id, req, res):
     email = req['request']['original_utterance'].lower()
 
-    if str(email).endswith("@edu.hse.ru"):
+    if str(email).endswith("@edu.hse.ru"):  # todo check email is valid
         sessionStorage[user_id] = {
             'stage': 2,
             'email': str(email)
         }
-
-
-def stage1_5(user_id, req, res):
-    pass
+        res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
+        res['response']['buttons'] = stage1_buttons
+        return
+    res['response']['text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
 
 
 def stage2(user_id, req, res):
