@@ -41,6 +41,7 @@ def main():
         indent=2
     )
 
+
 stage0_buttons = \
             [
                 {
@@ -69,6 +70,9 @@ def handle_dialog(req, res):
         res['response']['buttons'] = stage0_buttons
         return
 
+    if handle_exit(user_id, req, res):
+        return
+
     if sessionStorage[user_id]['stage'] == 0:
         stage0(user_id, req, res)
     elif sessionStorage[user_id]['stage'] == 1:
@@ -78,22 +82,18 @@ def handle_dialog(req, res):
     elif sessionStorage[user_id]['stage'] == 3:
         stage3(user_id, req, res)
 
-    # Обрабатываем ответ пользователя.
-    # if req['request']['original_utterance'].lower() in [
-    #     'ладно',
-    #     'куплю',
-    #     'покупаю',
-    #     'хорошо',
-    # ]:
-    #     # Пользователь согласился, прощаемся.
-    #     res['response']['text'] = 'Слона можно найти на Яндекс.Маркете!'
-    #     return
-    #
-    # # Если нет, то убеждаем его купить слона!
-    # res['response']['text'] = 'Все говорят "%s", а ты купи слона!' % (
-    #     req['request']['original_utterance']
-    # )
-    # res['response']['buttons'] = get_suggests(user_id)
+
+def handle_exit(user_id, req, res):
+    if req['request']['original_utterance'].lower() in [
+        'не хочу',
+        'нет',
+        'не',
+        'не сегодня',
+    ]:
+        res['response']['text'] = 'Жаль. Приходи еще.'
+        res['response']['end_session'] = True
+        return True
+    return False
 
 
 def stage0(user_id, req, res):
@@ -111,19 +111,12 @@ def stage0(user_id, req, res):
         }
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
         return
-    if req['request']['original_utterance'].lower() in [
-        'не хочу',
-        'нет',
-        'не',
-        'не сегодня',
-    ]:
-        res['response']['text'] = 'Жаль. Приходи еще.'
-        res['response']['end_session'] = True
-        return
+
     # Если нет, то убеждаем его купить слона!
     res['response']['text'] = 'Я вас не поняла'
     res['response']['buttons'] = stage0_buttons
     return
+
 
 stage1_buttons = \
             [
@@ -156,34 +149,50 @@ def stage1(user_id, req, res):
     res['response']['text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
 
 
+stage2_buttons = \
+            [
+                {
+                    "title": "А сегодня",
+                    "hide": True
+                },
+                {
+                    "title": "А завтра",
+                    "hide": True
+                },
+                {
+                    "title": "А на неделю",
+                    "hide": True
+                }
+            ]
+
+
 def stage2(user_id, req, res):
-    pass
+    if req['request']['original_utterance'].lower() in [
+        'сегодня',
+        'а сегодня',
+    ]:
+        res['response']['text'] = 'Поздравляю. Пар на сегодня нет.'  # todo go to API
+        res['response']['buttons'] = stage2_buttons[-2:]
+        return
+    if req['request']['original_utterance'].lower() in [
+        'завтра',
+        'а завтра',
+    ]:
+        res['response']['text'] = 'Поздравляю. Пар на завтра нет.'  # todo go to API
+        res['response']['buttons'] = [stage2_buttons[0], stage2_buttons[2]]
+        return
+    if req['request']['original_utterance'].lower() in [
+        'на неделю',
+        'а на неделю',
+    ]:
+        res['response']['text'] = 'Поздравляю. Пар на неделю нет.'  # todo go to API
+        res['response']['buttons'] = stage2_buttons[:2]
+        return
+
+    res['response']['text'] = 'Я вас не поняла. На какие даты показать расписание?'
+    res['response']['buttons'] = stage1_buttons
+    return
 
 
 def stage3(user_id, req, res):
     pass
-
-# # Функция возвращает две подсказки для ответа.
-# def get_suggests(user_id):
-#     session = sessionStorage[user_id]
-#
-#     # Выбираем две первые подсказки из массива.
-#     suggests = [
-#         {'title': suggest, 'hide': True}
-#         for suggest in session['suggests'][:2]
-#     ]
-#
-#     # Убираем первую подсказку, чтобы подсказки менялись каждый раз.
-#     session['suggests'] = session['suggests'][1:]
-#     sessionStorage[user_id] = session
-#
-#     # Если осталась только одна подсказка, предлагаем подсказку
-#     # со ссылкой на Яндекс.Маркет.
-#     if len(suggests) < 2:
-#         suggests.append({
-#             "title": "Ладно",
-#             "url": "https://market.yandex.ru/search?text=слон",
-#             "hide": True
-#         })
-#
-#     return suggests
