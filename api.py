@@ -95,7 +95,7 @@ def handle_exit(user_id, req, res):
         'нет',
         'не',
         'не сегодня',
-    ]:
+    ] or 'no' in req['request']['nlu']['intents']:
         res['response']['text'] = 'Жаль. Приходи еще.'
         res['response']['end_session'] = True
         return True
@@ -123,7 +123,7 @@ def stage0(user_id, req, res):
         'ок',
         'хорошо',
         'ага',
-    ]:
+    ] or 'yes' in req['request']['nlu']['intents']:
         # Пользователь согласился, идем на стадию 1.
         sessionStorage[user_id] = {
             'stage': 1
@@ -278,6 +278,7 @@ def try_parse_date(entities):
                 date = f"{year}.{month}.{day}"
     return date
 
+
 def datetime_format(d):
     day = d.day
     if day < 10:
@@ -287,6 +288,7 @@ def datetime_format(d):
         month = f"0{month}"
     year = d.year
     return f"{year}.{month}.{day}"
+
 
 def stage3(user_id, req, res):
     pass
