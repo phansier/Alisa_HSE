@@ -66,6 +66,8 @@ def handle_dialog(req, res):
 
     if handle_exit(user_id, req, res):
         return
+    if handle_logoff(user_id, req, res):
+        return
     if handle_help(user_id, req, res):
         return
 
@@ -123,6 +125,16 @@ def handle_exit(user_id, req, res):
     return False
 
 
+def handle_logoff(user_id, req, res):
+    if req['request']['original_utterance'].lower() in [
+        'выйти',
+        'выйди',
+    ]: # or 'no' in req['request']['nlu']['intents']:
+        get_login_text(user_id, req, res)
+        sessionStorage[user_id]['stage'] = 1
+        res['user_state_update'] = {'email': None}
+        return True
+
 def handle_help(user_id, req, res):
     if req['request']['original_utterance'].lower() in [
         'помощь',
@@ -136,6 +148,14 @@ def handle_help(user_id, req, res):
     return False
 
 
+def get_login_text(user_id, req, res):
+    if "screen" in req["meta"]["interfaces"]:
+        res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+    else:
+        res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru. Поговори со ' \
+                                  'мной с устройства с клавиатурой. И не перепутай аккаунты. '
+
+
 def stage0(user_id, req, res):
     # Обрабатываем ответ пользователя.
     if req['request']['original_utterance'].lower() in [
@@ -147,7 +167,9 @@ def stage0(user_id, req, res):
     ] or 'yes' in req['request']['nlu']['intents']:
         # Пользователь согласился, идем на стадию 1.
         sessionStorage[user_id]['stage'] = 1
-        res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+
+        get_login_text(user_id, req, res)
+
         if debug:
             res['response']['buttons'] = [
                 {
@@ -191,8 +213,19 @@ def stage1(user_id, req, res):
         res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
         res['response']['buttons'] = stage1_buttons
         return
-    res['response'][
-        'text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+
+    if 'state' in req and 'user' in req['state'] and 'email' in req['state']['user']:
+        email = req['state']['user']['email']
+        sessionStorage[user_id]['email'] = str(email)
+        res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
+        res['response']['buttons'] = stage1_buttons
+        return
+
+    if "screen" in req["meta"]["interfaces"]:
+        res['response']['text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+    else:
+        res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru. Поговори со ' \
+                                  'мной с устройства с клавиатурой. И не перепутай аккаунты. '
 
 
 stage2_buttons = \
