@@ -1,8 +1,6 @@
 # Навык Алисы для Расписания Высшей Школы Экономики
 ## Алиса, запусти навык Расписание Вышки
 
-Инструкция по развертыванию навыка на сервисе Now приведена в [документации Яндекс.Диалогов](https://tech.yandex.ru/dialogs/alice/doc/quickstart-python-docpage/).
-
 PRs приветствуются
 
-Нормальный хостинг – тоже
+Хостинг – Yandex.Cloud.Functions. [Инструкция по развертыванию](https://cloud.yandex.ru/docs/functions/solutions/alice-skill).
