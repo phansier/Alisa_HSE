@@ -14,7 +14,7 @@ from ruz import get_lessons, add_months, add_years
 
 debug = True
 
-app = Flask(__name__)
+# app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
 
