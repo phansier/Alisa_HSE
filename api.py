@@ -8,7 +8,7 @@ import logging
 import datetime
 
 # Импортируем подмодули Flask для запуска веб-сервиса.
-from flask import Flask, request
+# from flask import Flask, request
 
 from ruz import get_lessons, add_months, add_years
 
@@ -23,11 +23,30 @@ sessionStorage = {}
 
 
 # Задаем параметры приложения Flask.
-@app.route("/", methods=['POST'])
-def main():
-    # Функция получает тело запроса и возвращает ответ.
-    logging.info('Request: %r', request.json)
+# @app.route("/", methods=['POST'])
+# def main():
+#     # Функция получает тело запроса и возвращает ответ.
+#     logging.info('Request: %r', request.json)
+# 
+#     response = {
+#         "version": request.json['version'],
+#         "session": request.json['session'],
+#         "response": {
+#             "end_session": False
+#         }
+#     }
+# 
+#     handle_dialog(request.json, response)
+# 
+#     logging.info('Response: %r', response)
+# 
+#     return json.dumps(
+#         response,
+#         ensure_ascii=False,
+#         indent=2
+#     )
 
+def handler(event, context):
     response = {
         "version": request.json['version'],
         "session": request.json['session'],
@@ -35,16 +54,8 @@ def main():
             "end_session": False
         }
     }
-
-    handle_dialog(request.json, response)
-
-    logging.info('Response: %r', response)
-
-    return json.dumps(
-        response,
-        ensure_ascii=False,
-        indent=2
-    )
+    handle_dialog(event, response):
+    return response
 
 
 stage0_buttons = \
