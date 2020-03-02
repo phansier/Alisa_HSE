@@ -12,14 +12,11 @@ import datetime
 
 from ruz import get_lessons, add_months, add_years
 
-debug = True
+debug = False
 
 # app = Flask(__name__)
 
 logging.basicConfig(level=logging.DEBUG)
-
-# Хранилище данных о сессиях.
-sessionStorage = {}
 
 
 # Задаем параметры приложения Flask.
@@ -46,6 +43,7 @@ sessionStorage = {}
 #         indent=2
 #     )
 
+# Starter function for Yandex.Cloud.Functions
 def handler(event, context):
     response = {
         "version": event['version'],
@@ -85,30 +83,29 @@ def handle_dialog(req, res):
     if handle_help(user_id, req, res):
         return
 
-    if req['session']['new'] or user_id not in sessionStorage:
+    stage = 0
+
+    if req['session']['new']:  # or user_id not in sessionStorage:
         # Это новый пользователь.
         # Инициализируем сессию и поприветствуем его.
         debg = "!!!" if debug else "!"
 
         email = None
 
-        if user_id in sessionStorage and 'email' in sessionStorage[user_id]:
-            email = sessionStorage[user_id]['email']
         if 'state' in req and 'user' in req['state'] and 'email' in req['state']['user']:
             email = req['state']['user']['email']
         if email is not None:
-            sessionStorage[user_id]= {'email': email}
             res['user_state_update'] = {'email': email}
             hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n ' \
                     f'Ваш email: {email}. На какие даты показать расписание?'
             res['response']['text'] = hello
             res['response']['buttons'] = stage1_buttons
-            sessionStorage[user_id]['stage'] = 2
+            res['user_state_update'] = {'stage': 2}
+            stage = 2
             return
 
-        sessionStorage[user_id] = {
-            'stage': 0
-        }
+        res['user_state_update'] = {'stage': 0}
+        stage = 0
 
         hello = f'Привет{debg} Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала ' \
                 f'нам нужно познакомиться. '
@@ -116,14 +113,15 @@ def handle_dialog(req, res):
         res['response']['buttons'] = stage0_buttons
         return
 
-    if sessionStorage[user_id]['stage'] == 0:
+    if 'state' in req and 'user' in req['state'] and 'stage' in req['state']['user']:
+        stage = req['state']['user']['stage']
+
+    if stage == 0:
         stage0(user_id, req, res)
-    elif sessionStorage[user_id]['stage'] == 1:
+    elif stage == 1:
         stage1(user_id, req, res)
-    elif sessionStorage[user_id]['stage'] == 2:
+    elif stage == 2:
         stage2(user_id, req, res)
-    elif sessionStorage[user_id]['stage'] == 3:
-        stage3(user_id, req, res)
 
 
 def handle_exit(user_id, req, res):
@@ -143,11 +141,12 @@ def handle_logoff(user_id, req, res):
     if req['request']['original_utterance'].lower() in [
         'выйти',
         'выйди',
-    ]: # or 'no' in req['request']['nlu']['intents']:
+    ]:
         get_login_text(user_id, req, res)
-        sessionStorage[user_id]['stage'] = 1
+        res['user_state_update'] = {'stage': 1}
         res['user_state_update'] = {'email': None}
         return True
+
 
 def handle_help(user_id, req, res):
     if req['request']['original_utterance'].lower() in [
@@ -156,7 +155,8 @@ def handle_help(user_id, req, res):
         'что ты умеешь',
     ]:
         res['response'][
-            'text'] = 'Привет! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала нам нужно познакомиться.'
+            'text'] = 'Привет! Я могу рассказать о твоем расписании занятий в Высшей Школе Экономики. \n Но сначала ' \
+                      'нам нужно познакомиться. '
         res['response']['end_session'] = True
         return True
     return False
@@ -180,7 +180,7 @@ def stage0(user_id, req, res):
         'ага',
     ] or 'nlu' in req['request'] and 'intents' in req['request']['nlu'] and 'yes' in req['request']['nlu']['intents']:
         # Пользователь согласился, идем на стадию 1.
-        sessionStorage[user_id]['stage'] = 1
+        res['user_state_update'] = {'stage': 1}
 
         get_login_text(user_id, req, res)
 
@@ -219,10 +219,7 @@ def stage1(user_id, req, res):
     email = req['request']['original_utterance'].lower()
 
     if str(email).endswith("@edu.hse.ru"):  # todo check email is valid
-        sessionStorage[user_id]['stage'] = 2
-        sessionStorage[user_id]['email'] = str(email)
-
-        res['user_state_update'] = {'email': str(email)}
+        res['user_state_update'] = {'email': str(email), 'stage': 2}
 
         res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
         res['response']['buttons'] = stage1_buttons
@@ -230,13 +227,13 @@ def stage1(user_id, req, res):
 
     if 'state' in req and 'user' in req['state'] and 'email' in req['state']['user']:
         email = req['state']['user']['email']
-        sessionStorage[user_id]['email'] = str(email)
         res['response']['text'] = f"Ваш email: {email}. На какие даты показать расписание?"
         res['response']['buttons'] = stage1_buttons
         return
 
     if "screen" in req["meta"]["interfaces"]:
-        res['response']['text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
+        res['response'][
+            'text'] = 'Я вас не поняла. Чтобы показать расписание мне нужен твой E-mail, заканчивающийся на @edu.hse.ru'
     else:
         res['response']['text'] = 'Для начала мне нужен твой E-mail, заканчивающийся на @edu.hse.ru. Поговори со ' \
                                   'мной с устройства с клавиатурой. И не перепутай аккаунты. '
@@ -261,39 +258,26 @@ stage2_buttons = \
 
 def stage2(user_id, req, res):
     date = try_parse_date(req['request']['nlu']['entities'])
-    if date is not None:
-        response = get_lessons(sessionStorage[user_id]['email'], date, date)
-        user_date = req['request']['original_utterance'].title()
-        res['response']['text'] = user_date + " " + response
-        res['response']['buttons'] = stage2_buttons
-        return
-    # if req['request']['original_utterance'].lower() in [
-    #     'сегодня',
-    #     'а сегодня',
-    # ]:
-    #     response = get_lessons(sessionStorage[user_id]['email'], "2020.02.29", "2020.02.29")
-    #     res['response']['text'] = response
-    #     res['response']['buttons'] = stage2_buttons[-2:]
-    #     return
-    # if req['request']['original_utterance'].lower() in [
-    #     'завтра',
-    #     'а завтра',
-    # ]:
-    #     res['response']['text'] = 'Поздравляю. Пар на завтра нет.'  # todo go to API
-    #     res['response']['buttons'] = [stage2_buttons[0], stage2_buttons[2]]
-    #     return
-    if req['request']['original_utterance'].lower() in [
-        'на неделю',
-        'а на неделю',
-    ]:
-        d = datetime.datetime.now()
-        start = datetime_format(d)
-        d += datetime.timedelta(days=7)
-        end = datetime_format(d)
-        response = get_lessons(sessionStorage[user_id]['email'], start, end)
-        res['response']['text'] = response
-        res['response']['buttons'] = stage2_buttons[:2]
-        return
+    if 'state' in req and 'user' in req['state'] and 'email' in req['state']['user']:
+        email = req['state']['user']['email']
+        if date is not None:
+            response = get_lessons(email, date, date)
+            user_date = req['request']['original_utterance'].title()
+            res['response']['text'] = user_date + " " + response
+            res['response']['buttons'] = stage2_buttons
+            return
+        if req['request']['original_utterance'].lower() in [
+            'на неделю',
+            'а на неделю',
+        ]:
+            d = datetime.datetime.now()
+            start = datetime_format(d)
+            d += datetime.timedelta(days=7)
+            end = datetime_format(d)
+            response = get_lessons(email, start, end)
+            res['response']['text'] = response
+            res['response']['buttons'] = stage2_buttons[:2]
+            return
 
     res['response']['text'] = 'Я вас не поняла. На какие даты показать расписание?'
     res['response']['buttons'] = stage1_buttons
@@ -357,7 +341,3 @@ def datetime_format(d):
         month = f"0{month}"
     year = d.year
     return f"{year}.{month}.{day}"
-
-
-def stage3(user_id, req, res):
-    pass
