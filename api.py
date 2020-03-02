@@ -48,13 +48,13 @@ sessionStorage = {}
 
 def handler(event, context):
     response = {
-        "version": request.json['version'],
-        "session": request.json['session'],
+        "version": event['version'],
+        "session": event['session'],
         "response": {
             "end_session": False
         }
     }
-    handle_dialog(event, response):
+    handle_dialog(event, response)
     return response
 
 
